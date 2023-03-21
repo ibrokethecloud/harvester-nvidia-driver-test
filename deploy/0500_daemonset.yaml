@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: nvidia-driver-daemonset
+  name: nvidia-driver-daemonset
+  namespace: "harvester-system"
+  annotations:
+    openshift.io/scc: nvidia-driver
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-driver-daemonset
+  updateStrategy:
+    type: OnDelete
+  template:
+    metadata:
+      labels:
+        app: nvidia-driver-daemonset
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: nvidia-driver
+      hostPID: true
+      containers:
+        - image: gmehta3/nvidia-sles:dev
+          imagePullPolicy: Always
+          name: nvidia-driver-ctr
+          command: ["nvidia-driver"]
+          args: ["init"]
+          securityContext:
+            privileged: true
+            seLinuxOptions:
+              level: "s0"
+          volumeMounts:
+            - name: run-nvidia
+              mountPath: /run/nvidia
+              mountPropagation: Bidirectional
+            - name: run-nvidia-topologyd
+              mountPath: /run/nvidia-topologyd
+            - name: var-log
+              mountPath: /var/log
+            - name: dev-log
+              mountPath: /dev/log
+            - name: host-os-release
+              mountPath: "/host-etc/os-release"
+              readOnly: true
+            - name: mlnx-ofed-usr-src
+              mountPath: /run/mellanox/drivers/usr/src
+              mountPropagation: HostToContainer
+            - name: run-mellanox-drivers
+              mountPath: /run/mellanox/drivers
+              mountPropagation: HostToContainer
+      volumes:
+        - name: run-nvidia
+          hostPath:
+            path: /run/nvidia
+            type: DirectoryOrCreate
+        - name: var-log
+          hostPath:
+            path: /var/log
+        - name: dev-log
+          hostPath:
+            path: /dev/log
+        - name: host-os-release
+          hostPath:
+            path: "/etc/os-release"
+        - name: run-nvidia-topologyd
+          hostPath:
+            path: /run/nvidia-topologyd
+            type: DirectoryOrCreate
+        - name: mlnx-ofed-usr-src
+          hostPath:
+            path: /run/mellanox/drivers/usr/src
+            type: DirectoryOrCreate
+        - name: run-mellanox-drivers
+          hostPath:
+            path: /run/mellanox/drivers
+            type: DirectoryOrCreate
+        - name: run-nvidia-validations
+          hostPath:
+            path: /run/nvidia/validations
+            type: DirectoryOrCreate
+        - name: host-root
+          hostPath:
+            path: "/"
+        - name: host-sys
+          hostPath:
+            path: /sys
+            type: Directory
